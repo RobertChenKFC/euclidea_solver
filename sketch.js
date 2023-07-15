@@ -22,10 +22,6 @@ class Obj {
   }
 
   setSelect(selected) {
-    // DEBUG
-    if (selected && this instanceof Vertex)
-      console.log(`(${this.getX()}, ${this.getY()})`);
-
     if (!this.disabled)
       this.selected = selected;
   }
@@ -41,7 +37,7 @@ class Obj {
 class Vertex extends Obj {
   static RADIUS = 4;
   static RADIUS_SQ = Vertex.RADIUS * Vertex.RADIUS;
-  static STROKE;
+  static HOVER_STROKE;
   static STROKE_WEIGHT = 3;
   static HOVER_RADIUS = 6;
   static LABEL_X_DIFF = 10;
@@ -78,7 +74,7 @@ class Vertex extends Obj {
   drawWithColor(color) {
     push();
     if (this.selected)
-      stroke(Vertex.STROKE);
+      stroke(Vertex.HOVER_STROKE);
     else
       stroke(color);
     strokeWeight(Vertex.STROKE_WEIGHT);
@@ -107,19 +103,58 @@ class Vertex extends Obj {
   }
 
   closeTo(v) {
-    // DEBUG
-    /*
-    return Math.abs(this.getX() - v.getX()) < EPSILON &&
-           Math.abs(this.getY() - v.getY()) < EPSILON;
-    */
     return round(this.getX()) == round(v.getX()) &&
            round(this.getY()) == round(v.getY());
   }
 
   static addObject(objects) {
+    // Create intersection vertex
+    for (let i = 0; i < objects.length; ++i) {
+      const o1 = objects[i];
+      if (o1 instanceof Vertex)
+        continue;
+      for (let j = i + 1; j < objects.length; ++j) {
+        const o2 = objects[j];
+        if (o2 instanceof Vertex)
+          continue;
+        if (o1.inHover() && o2.inHover()) {
+          const intersections = Intersection.check(o1, o2);
+          let minMagSq = Infinity;
+          let minV = null;
+          for (const v of intersections) {
+            const magSq = createVector(
+                v.getX() - mouseX, v.getY() - mouseY).magSq();
+            if (magSq < minMagSq) {
+              minMagSq = magSq;
+              minV = v;
+            }
+          }
+          if (minV !== null) {
+            objects.push(minV);
+            return minV;
+          }
+        }
+      }
+    }
+
+    // Create vertex bounded to a line or circle
+    for (const o of objects) {
+      if ((o instanceof Line || o instanceof Circle) && o.inHover()) {
+        const v = new BoundedVertex(new Vertex(mouseX, mouseY), o);
+        objects.push(v);
+        return v;
+      }
+    }
+
+    // Create free vertex
     const v = new Vertex(mouseX, mouseY);
     objects.push(v);
     return v;
+  }
+
+  moveToClosest(v) {
+    this.x = v.x;
+    this.y = v.y;
   }
 
   static selectVertex(objects) {
@@ -146,16 +181,25 @@ class Vertex extends Obj {
   }
 
   static move(objects) {
-    if (Vertex.selectedVertex) {
-      Vertex.selectedVertex.x = mouseX;
-      Vertex.selectedVertex.y = mouseY;
-    }
+    if (Vertex.selectedVertex)
+      Vertex.selectedVertex.moveToClosest(new Vertex(mouseX, mouseY));
   }
 }
 
-class Line extends Obj {
+class Obj1D extends Obj {
   static STROKE;
+  static HOVER_STROKE;
   static STROKE_WEIGHT = 2;
+
+  inHover() {
+    if (this.disabled)
+      return false;
+    return this.vecToProj(
+        new Vertex(mouseX, mouseY)).magSq() < Vertex.RADIUS_SQ;
+  }
+}
+
+class Line extends Obj1D {
   static selectedVertex = null;
 
   constructor(v1, v2) {
@@ -166,8 +210,11 @@ class Line extends Obj {
 
   drawImpl() {
     push();
-    stroke(Line.STROKE);
-    strokeWeight(Line.STROKE_WEIGHT);
+    if (this.inHover())
+      stroke(Obj1D.HOVER_STROKE);
+    else
+      stroke(Obj1D.STROKE);
+    strokeWeight(Obj1D.STROKE_WEIGHT);
     const dx = this.v1.getX() - this.v2.getX();
     const dy = this.v1.getY() - this.v2.getY();
     if (abs(dx) > abs(dy)) {
@@ -193,6 +240,14 @@ class Line extends Obj {
     return colinear(this.v1, this.v2, l.v1) && colinear(this.v2, l.v1, l.v2);
   }
 
+  vecToProj(v) {
+    const x1 = this.v1.getX(), y1 = this.v1.getY();
+    const x2 = v.getX(), y2 = v.getY();
+    const a = this.v2.getX() - x1, b = this.v2.getY() - y1;
+    const s = (b * (x2 - x1) - a * (y2 - y1)) / (a * a + b * b);
+    return createVector(-b * s, a * s);
+  }
+
   static addObject(objects) {
     let l = null;
     for (const object of objects) {
@@ -214,9 +269,7 @@ class Line extends Obj {
   }
 }
 
-class Circle extends Obj {
-  static STROKE = 0;
-  static STROKE_WEIGHT = 2;
+class Circle extends Obj1D {
   static selectedVertex = null;
 
   constructor(v1, v2) {
@@ -227,8 +280,11 @@ class Circle extends Obj {
 
   drawImpl() {
     push();
-    stroke(Circle.STROKE);
-    strokeWeight(Circle.STROKE_WEIGHT);
+    if (this.inHover())
+      stroke(Obj1D.HOVER_STROKE);
+    else
+      stroke(Obj1D.STROKE);
+    strokeWeight(Obj1D.STROKE_WEIGHT);
     noFill();
     const distVec = createVector(this.v1.getX() - this.v2.getX(),
                                  this.v1.getY() - this.v2.getY());
@@ -236,12 +292,22 @@ class Circle extends Obj {
     pop();
   }
 
+  rSq() {
+    const dx = this.v1.getX() - this.v2.getX();
+    const dy = this.v1.getY() - this.v2.getY();
+    return dx * dx + dy * dy;
+  }
+
   closeTo(c) {
-    function rSq(o) {
-      const dx = o.v1.getX() - o.v2.getX(), dy = o.v1.getY() - o.v2.getY();
-      return dx * dx + dy * dy;
-    }
-    return this.v1.closeTo(c.v1) && Math.abs(rSq(this) - rSq(c)) < EPSILON;
+    return this.v1.closeTo(c.v1) && Math.abs(this.rSq() - c.rSq()) < EPSILON;
+  }
+
+  vecToProj(v) {
+    const u = createVector(
+        this.v1.getX() - v.getX(), this.v1.getY() - v.getY());
+    const r = Math.sqrt(this.rSq());
+    const uMag = u.mag();
+    return u.mult((uMag - r) / uMag);
   }
 
   static addObject(objects) {
@@ -268,16 +334,11 @@ class Circle extends Obj {
 class Intersection extends Vertex {
   static INF_X = CANVAS_WIDTH * 2;
   static INF_Y = CANVAS_HEIGHT * 2;
-  static COLOR;
 
   constructor() {
     super(null, null);
     this.vcache = null;
     this.icache = null;
-  }
-
-  draw() {
-    this.drawWithColor(Intersection.COLOR);
   }
 
   calcWithCache() {
@@ -336,7 +397,38 @@ class Intersection extends Vertex {
   }
 }
 
-class LinesIntersection extends Intersection {
+class BoundedVertex extends Intersection {
+  constructor(v, o) {
+    super();
+    this.v = v;
+    this.o = o;
+  }
+
+  getVertices() {
+    return [
+        this.v.getX(), this.v.getY(),
+        this.o.v1.getX(), this.o.v1.getY(), this.o.v2.getX(), this.o.v2.getY()];
+  }
+
+  moveToClosest(v) {
+    this.v = v;
+  }
+
+  calc() {
+    const vec = this.o.vecToProj(this.v);
+    return [this.v.getX() + vec.x, this.v.getY() + vec.y];
+  }
+}
+
+class FixedIntersection extends Intersection {
+  static COLOR;
+
+  draw() {
+    this.drawWithColor(FixedIntersection.COLOR);
+  }
+}
+
+class LinesIntersection extends FixedIntersection {
   constructor(l1, l2) {
     super();
     this.l1 = l1;
@@ -370,7 +462,7 @@ class LinesIntersection extends Intersection {
   }
 }
 
-class LineCircleIntersection extends Intersection {
+class LineCircleIntersection extends FixedIntersection {
   constructor(l, c, first) {
     super();
     this.l = l;
@@ -414,7 +506,7 @@ class LineCircleIntersection extends Intersection {
   }
 }
 
-class CirclesIntersection extends Intersection {
+class CirclesIntersection extends FixedIntersection {
   constructor(c1, c2, first) {
     super();
     this.c1 = c1;
@@ -574,9 +666,6 @@ class SqrtNode extends UnaryArithNode {
 
 class VertexOperandsNode extends ASTNode {
   constructor(vertices) {
-    // DEBUG
-    console.log(vertices);
-
     super(vertices.map(label => vertexTable[label]));
   }
 
@@ -670,10 +759,13 @@ function setup() {
   angleMode(DEGREES);
 
   Vertex.COLOR = color(0, 0, 255);
-  Vertex.STROKE = color(255, 0, 0);
+  Vertex.HOVER_STROKE = color(255, 0, 0);
 
-  Line.STROKE = 0;
-  Intersection.COLOR = 0;
+  Obj1D.STROKE = 0;
+  Obj1D.HOVER_STROKE = color(255, 0, 0);
+
+  FixedIntersection.COLOR = 0;
+
   toolSelect = select("#tool");
   numObjectsDiv = select("#numObjects");
   labelInput = select("#label");
@@ -705,17 +797,7 @@ const mousePressedHandlers = {
 function mousePressed() {
   if (!mouseInCanvas())
     return;
-  const o1 = applyHandler(mousePressedHandlers);
-  if (o1) {
-    const newObjects = [];
-    for (let i = 0; i < objects.length - 1; ++i) {
-      const o2 = objects[i];
-      for (const o of Intersection.check(o1, o2))
-        newObjects.push(o);
-    }
-    for (const o of newObjects)
-      objects.push(o);
-  }
+  applyHandler(mousePressedHandlers);
 }
 
 const mouseReleasedHandlers = {
