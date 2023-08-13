@@ -5,6 +5,7 @@ base class Vertex extends Obj {
   Offset _v;
   static const r = 5.0;
   static const strokeWidth = 3.0;
+  static const eps = 1e-6;
 
   Vertex(this._v);
 
@@ -28,15 +29,25 @@ base class Vertex extends Obj {
       ..style = PaintingStyle.fill
       ..strokeWidth = strokeWidth;
 
-    canvas.drawCircle(_v, r, paint);
+    canvas.drawCircle(v, r, paint);
   }
   
   @override
   bool inHover(Offset p) {
-    final dx = _v.dx - p.dx, dy = _v.dy - p.dy;
+    final dx = v.dx - p.dx, dy = v.dy - p.dy;
     return dx * dx + dy * dy <= Obj.threshold;
   }
 
   @override
   bool isForeground() => true;
+
+  bool isCloseTo(Vertex v2) {
+    final dx = v.dx - v2.v.dx, dy = v.dy - v2.v.dy;
+    return dx * dx + dy * dy < eps;
+  }
+
+  bool isCloseToOffset(Offset v2) {
+    final dx = v.dx - v2.dx, dy = v.dy - v2.dy;
+    return dx * dx + dy * dy < eps;
+  }
 }

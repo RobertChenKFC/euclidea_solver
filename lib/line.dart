@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
-import 'dart:developer' as developer;
+import 'circle.dart';
+import 'fixed_intersection.dart';
+import 'lines_intersection.dart';
+import 'line_circle_intersection.dart';
 import 'obj1d.dart';
 import 'vertex.dart';
 
@@ -8,6 +11,21 @@ final class Line extends Obj1d {
   final Vertex _v1, _v2;
 
   Line(this._v1, this._v2);
+
+  Vertex get v1 => _v1;
+  Vertex get v2 => _v2;
+
+  @override
+  List<FixedIntersection> getIntersections(Obj1d obj) {
+    if (obj is Line) {
+      return [LinesIntersection(this, obj)];
+    } else if (obj is Circle) {
+      return [
+          LineCircleIntersection(this, obj, true),
+          LineCircleIntersection(this, obj, false)];
+    }
+    return [];
+  }
 
   @override
   void draw(Canvas canvas, Size size) {
@@ -35,16 +53,7 @@ final class Line extends Obj1d {
     final u = Offset(_v2.v.dx - _v1.v.dx, _v2.v.dy - _v1.v.dy);
     final s = (u.dy * (v.dx - _v1.v.dx) - u.dx * (v.dy - _v1.v.dy)) /
               (u.dx * u.dx + u.dy * u.dy);
-    
-    final vec = Offset(-s * u.dy, s * u.dx);
-
-    // DEBUG
-    final p = Offset(v.dx + vec.dx, v.dy + vec.dy);
-    final m1 = (_v1.v.dy - _v2.v.dy) / (_v1.v.dx - _v2.v.dx);
-    final m2 = (p.dy - _v2.v.dy) / (p.dx - _v2.v.dx);
-    developer.log("Expected slope = $m1, got slope = $m2");
-
-    return vec;
+    return Offset(-s * u.dy, s * u.dx);
   }
 
   @override

@@ -3,6 +3,7 @@ import 'dart:collection';
 import 'obj.dart';
 import 'tool_icon.dart';
 import 'obj_handler.dart';
+import 'dart:developer' as developer;
 
 class ObjPainterWidget extends StatefulWidget {
   const ObjPainterWidget({Key? key}) : super(key: key);
@@ -85,6 +86,9 @@ class ObjPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
+    // DEBUG
+    // developer.log("Foreground: $paintForeground, Current number of objects: ${objs.length}");
+
     for (final obj in objs) {
       if (obj.isForeground() == paintForeground) {
         obj.draw(canvas, size);

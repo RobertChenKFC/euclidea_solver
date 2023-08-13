@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'dart:math';
-import 'dart:developer' as developer;
+import 'circles_intersection.dart';
+import 'fixed_intersection.dart';
+import 'line.dart';
+import 'line_circle_intersection.dart';
 import 'obj1d.dart';
 import 'vertex.dart';
 
@@ -9,6 +12,23 @@ final class Circle extends Obj1d {
   final _strokeWidth = 3.0;
 
   Circle(this._v1, this._v2);
+
+  Vertex get v1 => _v1;
+  Vertex get v2 => _v2;
+
+  @override
+  List<FixedIntersection> getIntersections(Obj1d obj) {
+    if (obj is Line) {
+      return [
+          LineCircleIntersection(obj, this, true),
+          LineCircleIntersection(obj, this, false)];
+    } else if (obj is Circle) {
+      return [
+          CirclesIntersection(this, obj, true),
+          CirclesIntersection(this, obj, false)];
+    }
+    return [];
+  }
 
   double get r2 {
     final dx = _v1.v.dx - _v2.v.dx;
@@ -36,15 +56,7 @@ final class Circle extends Obj1d {
     final mag = sqrt(u.dx * u.dx + u.dy * u.dy);
     final s = (mag - r) / mag;
 
-    final vec = Offset(s * u.dx, s * u.dy);
-
-    // DEBUG
-    developer.log("Vector to circle: $vec");
-    final p = Offset(v.dx + vec.dx - _v1.v.dx, v.dy + vec.dy - _v1.v.dy);
-    final d = sqrt(p.dx * p.dx + p.dy * p.dy);
-    developer.log("Distance to center: $d, radius: $r");
-
-    return vec;
+    return Offset(s * u.dx, s * u.dy);
   }
 
   @override

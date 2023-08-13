@@ -12,11 +12,11 @@ class HomeApp extends StatelessWidget {
       appBar: AppBar(
         title: const Text("Euclidea Solver"),
         actions: [
-          PopupMenuButton(itemBuilder: (context) {
-            return [
-              PopupMenuItem(
-                child: GestureDetector(
-                  onTapUp: (details) {
+          PopupMenuButton(
+            itemBuilder: (context) {
+              return [
+                PopupMenuItem(
+                  onTap: () {
                     _objPainterWidgetKey.currentState!.clear();
                   },
                   child: const Row(
@@ -32,10 +32,10 @@ class HomeApp extends StatelessWidget {
                       Text("Reset")
                     ]
                   )
-                )
-              ),
-            ];
-          }),
+                ),
+              ];
+            }
+          )
         ],
       ),
       body: ObjPainterWidget(key: _objPainterWidgetKey),
