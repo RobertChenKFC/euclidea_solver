@@ -56,7 +56,7 @@ def test_solution_2():
         return False
 
     solution = Solution(canvas_creator, verifier)
-    solution.add(CreatePoint())
+    solution.add(CreatePoint(exclusion_list=(2,)))
     solution.add(CreateCircle(3, 0))
     solution.add(CreateLine(3, 5))
     assert not solution.verify()
@@ -69,7 +69,6 @@ def test_solution_3():
 
     def canvas_creator():
         canvas = Canvas()
-        canvas.create_point()
         canvas.create_point()
         canvas.create_point()
         return canvas
@@ -87,14 +86,15 @@ def test_solution_3():
         return all(matches)
 
     solution = Solution(canvas_creator, verifier)
-    solution.add(CreateLine(0, 2))
-    solution.add(CreateCircle(2, 0))
-    solution.add(CreateLine(1, 5))
-    solution.add(CreateCircle(1, 5))
-    solution.add(CreateLine(0, 1))
-    solution.add(CreateLine(2, 10))
+    solution.add(CreateLine(0, 1), verbose=True)
+    solution.add(CreatePoint(exclusion_list=(2,)), verbose=True)
+    solution.add(CreateCircle(3, 0), verbose=True)
+    solution.add(CreateLine(0, 3), verbose=True)
+    solution.add(CreateLine(1, 7), verbose=True)
+    solution.add(CreateCircle(1, 7), verbose=True)
+    solution.add(CreateLine(3, 14), verbose=True)
     assert not solution.verify()
-    solution.add(CreateCircle(17, 1))
+    solution.add(CreateCircle(17, 1), verbose=True)
     assert solution.verify()
 
 

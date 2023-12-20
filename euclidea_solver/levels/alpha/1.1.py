@@ -1,14 +1,21 @@
 from math import cos, pi
 from euclidea_solver.canvas import Canvas
+from euclidea_solver.solution import Solution
 from euclidea_solver.solver import Solver
-from euclidea_solver.entity.point import THRESH
+from euclidea_solver.entity.point import Point, THRESH
 
-def canvas_creator():
-    canvas = Canvas()
-    p1 = canvas.create_point()
-    p2 = canvas.create_point()
-    canvas.create_line(p1, p2)
-    return canvas
+
+class CanvasCreator:
+    def __init__(self):
+        self.p1 = None
+        self.p2 = None
+
+    def __call__(self):
+        canvas = Canvas()
+        p1 = canvas.create_point(self.p1)
+        p2 = canvas.create_point(self.p2)
+        canvas.create_line(p1, p2)
+        return canvas
 
 
 def verifier(canvas):
@@ -25,8 +32,15 @@ def verifier(canvas):
 
 
 def main():
+    canvas_creator = CanvasCreator()
     solver = Solver(canvas_creator, verifier)
-    solver.solve()
+    insts = solver.solve()
+
+    canvas_creator.p1 = Point(0, 0)
+    canvas_creator.p2 = Point(10, 0)
+    solution = Solution(canvas_creator, verifier, insts=insts)
+    with open("1.1.tex", "w") as outfile:
+        outfile.write(solution.gen_latex("Level 1.1"))
 
 
 if __name__ == "__main__":

@@ -44,7 +44,26 @@ class Circle:
             return []
 
     def is_close_to(self, c):
+        # TODO: difference of squares can probably be replaced with expression
+        #       that only requires one square root
         return (
             self.p1.dist_sq(c.p1) < THRESH_SQ and
             abs(self.r() - c.r()) < THRESH
         )
+
+    def contains(self, p):
+        # TODO: same optimization as Circle.is_close_to probably applies here
+        return abs(self.p1.dist(p) - self.r()) < THRESH
+
+    def gen_latex(self, top_left, bottom_right, label, color="black"):
+        x, y, r = self.p1.x, self.p1.y, self.r()
+        return f"""
+        \\draw[color={color}] ({x}, {y}) circle ({r});
+        \\draw[color={color}] ({x + r / sqrt(2)}, {y + r / sqrt(2)})
+            node[above right] {{{label}}};
+        """
+
+    def get_bounds(self):
+        r = self.r()
+        v = Point(r, r)
+        return self.p1 - v, self.p1 + v

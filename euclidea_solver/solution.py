@@ -1,26 +1,30 @@
-from euclidea_solver.canvas import Canvas
+from euclidea_solver.canvas import Canvas, CANVAS_BORDER_RATIO
+from euclidea_solver.entity.point import Point
 from euclidea_solver.entity.line import Line
 from euclidea_solver.entity.circle import Circle
 
 class Inst:
-    def __init__(self, method, *args):
+    def __init__(self, method, *args, **kwargs):
         self._method = method
         self._args = args
+        self._kwargs = kwargs
         self._idx = None
+        self._hash = hash((
+            id(self._method), *self._args, *sorted(self._kwargs.items())
+        ))
 
     def _idx_str(self):
         return f" {self._idx}" if self._idx is not None else ""
 
     def __call__(self, canvas):
-        self._idx = self._method(canvas, *self._args)
+        self._idx = self._method(canvas, *self._args, **self._kwargs)
         return self._idx
 
     def cost(self):
         return 1
 
     def __hash__(self):
-        return hash((id(self._method), *self._args))
-
+        return self._hash
 
     def __eq__(self, inst):
         return (
@@ -36,8 +40,10 @@ class PointInst(Inst):
 
 
 class CreatePoint(PointInst):
-    def __init__(self):
-        super().__init__(Canvas.create_point)
+    def __init__(self, point=None, exclusion_list=()):
+        super().__init__(
+            Canvas.create_point, point=point, exclusion_list=exclusion_list
+        )
 
     def __str__(self):
         return f"Create point{self._idx_str()}"
@@ -90,26 +96,36 @@ class CreateCircle(Inst):
 
 
 class Solution:
-    def __init__(self, canvas_creator, verifier):
+    def __init__(self, canvas_creator, verifier, insts=None):
         self._canvas_creator = canvas_creator
         self._verifier = verifier
         self.clear()
+        if insts is not None:
+            for inst in insts:
+                self.add(inst)
 
     def clear(self):
         self._insts = []
         self._canvas = self._canvas_creator()
 
-    def add(self, inst, verbose=False):
+    def add(self, inst, verbose=False, gen_latex=False):
         self._insts.append(inst)
         idx = inst(self._canvas)
-        if verbose:
+        if verbose or gen_latex:
             intersections = self._canvas.get_intersections()[idx]
-            print(f"{inst}" + (
-                ", intersecting with the following objects: "
-                if len(intersections) != 0 else ""
-            ))
+            msg = (
+                f"{inst}" + (
+                    ", intersecting with the following objects: "
+                    if len(intersections) != 0 else ""
+                ) + "\n"
+            )
+            if gen_latex and len(intersections) != 0:
+                msg += "\\begin{itemize}\n"
             for obj, ps in intersections.items():
-                msg = "- "
+                if verbose:
+                    msg += "- "
+                else:
+                    msg += "\\item "
                 # TODO: refactor this into something more elegant
                 if isinstance(obj, Line):
                     msg += f"Line {self._canvas.get_lines()[obj]}"
@@ -118,8 +134,13 @@ class Solution:
                 msg += f" at Point"
                 if len(ps) > 1:
                     msg += "s"
-                msg += " " + ", ".join([str(p) for p in ps])
-                print(msg)
+                msg += " " + ", ".join([str(p) for p in ps]) + "\n"
+            if gen_latex and len(intersections) != 0:
+                msg += "\\end{itemize}\n"
+            if verbose:
+                print(msg, end="")
+            elif gen_latex:
+                return msg
 
     def pop(self):
         self._insts.pop()
@@ -149,3 +170,56 @@ class Solution:
                 return False
         return True
 
+    def gen_latex(self, title):
+        canvas = self._canvas_creator()
+        for inst in self._insts:
+            inst(canvas)
+        top_left, bottom_right = None, None
+        for i in range(canvas.get_num_objs()):
+            obj = canvas.get_obj(i)
+            obj_top_left, obj_bottom_right = obj.get_bounds()
+            if top_left is None:
+                top_left, bottom_right = obj_top_left, obj_bottom_right
+            else:
+                top_left = Point(
+                    min(top_left.x, obj_top_left.x),
+                    min(top_left.y, obj_top_left.y)
+                )
+                bottom_right = Point(
+                    max(bottom_right.x, obj_bottom_right.x),
+                    max(bottom_right.y, obj_bottom_right.y)
+                )
+        top_left *= 1 + CANVAS_BORDER_RATIO
+        bottom_right *= 1 + CANVAS_BORDER_RATIO
+
+        latex = ""
+        solution = Solution(self._canvas_creator, self._verifier)
+        canvas = self._canvas_creator()
+        for inst in self._insts:
+            inst_latex = solution.add(inst, gen_latex=True)
+            new_obj_idx = canvas.get_num_objs()
+            inst(canvas)
+            latex += f"""
+            \\item {inst_latex}
+            {canvas.gen_latex(top_left, bottom_right, new_obj_idx)}
+            """
+
+        return """
+        \\documentclass{article}
+        \\usepackage{tikz}
+        \\usepackage{float}
+
+        \\title{%s}
+        \\author{}
+        \\date{}
+
+        \\begin{document}
+
+        \\maketitle
+
+        \\begin{enumerate}
+        %s
+        \\end{enumerate}
+
+        \\end{document}
+        """ % (title, latex)

@@ -2,8 +2,10 @@ from math import sqrt
 from random import random
 
 THRESH = 1e-6
-THRESH_SQ = 1e-12
-RAND_RANGE = 1e3
+THRESH_SQ = THRESH * THRESH
+RAND_RANGE = 1e2
+COORD_RANGE = 1e6
+POINT_SIZE = 0.2
 
 class Point:
     def __init__(self, x=None, y=None):
@@ -68,3 +70,15 @@ class Point:
         if m1 == 0 or m2 == 0:
             return True
         return abs(1 - abs(self.dot(p)) / (m1 * m2)) < THRESH
+
+    def is_in_range(self):
+        return abs(self.x) < COORD_RANGE and abs(self.y) < COORD_RANGE
+
+    def gen_latex(self, top_left, bottom_right, label, color="blue"):
+        return f"""
+        \\draw[fill={color}] ({self.x}, {self.y}) circle ({POINT_SIZE})
+            node[text=black, above right] {{{label}}};
+        """
+
+    def get_bounds(self):
+        return self, self

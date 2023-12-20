@@ -5,6 +5,9 @@ from euclidea_solver.entity.point import Point, RAND_RANGE, THRESH_SQ, THRESH
 from euclidea_solver.entity.line import Line
 from euclidea_solver.entity.circle import Circle
 
+CANVAS_MAX_WIDTH = 10
+CANVAS_BORDER_RATIO = 0.1
+
 class Canvas:
     def __init__(self):
         self._objs = []
@@ -52,9 +55,15 @@ class Canvas:
                 return idx
         return self._add_obj(p, self._points)
 
-    def create_point(self):
+    def create_point(self, point=None, exclusion_list=()):
         self._create_undo_point()
-        p = Point()
+        p = point
+        while p is None:
+            p = Point()
+            for obj in exclusion_list:
+                if self._objs[obj].contains(p):
+                    p = None
+                    break
         cur_len = len(self._objs)
         while (idx := self._add_point(p)) < cur_len:
             p = Point()
@@ -124,3 +133,32 @@ class Canvas:
                     if isinstance(obj, cls):
                         del objs[obj]
                         break
+
+    def gen_latex(self, top_left, bottom_right, new_obj_idx):
+        latex = ""
+        for idx, obj in enumerate(self._objs):
+            kwargs = dict()
+            if idx == new_obj_idx:
+                kwargs["color"] = "red"
+            latex += obj.gen_latex(top_left, bottom_right, idx, **kwargs)
+
+        size = CANVAS_MAX_WIDTH / max(
+            bottom_right.x - top_left.x, bottom_right.y - top_left.y
+        )
+        return """
+        \\begin{figure}[H]
+            \\centering
+            \\begin{tikzpicture}[x=%scm, y=%scm]
+                \\clip (%s, %s) rectangle (%s, %s);
+                \\draw (current bounding box.north east)
+                    -- (current bounding box.north west)
+                    -- (current bounding box.south west)
+                    -- (current bounding box.south east)
+                    -- cycle;
+                %s
+            \\end{tikzpicture}
+        \\end{figure}
+        """ % (
+            size, size, top_left.x, top_left.y,
+            bottom_right.x, bottom_right.y, latex
+        )

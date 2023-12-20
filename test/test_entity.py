@@ -61,3 +61,16 @@ def test_parallel():
         assert p.is_parallel_to(p * m)
         assert not p.is_parallel_to(q * m)
 
+def test_close_lines():
+    p = Point(84.4421851525048, 75.79544029403024)
+    q = Point(134.34595041723873, 33.41041322460994)
+    v = q - p
+    v = Point(-v.y, v.x)
+    r = p + v
+    l1 = Line(p, q)
+    l2 = Line(q, p)
+    l3 = Line(p, r)
+    assert l1.is_close_to(l2)
+    assert l2.is_close_to(l1)
+    assert not l1.is_close_to(l3)
+    assert not l3.is_close_to(l1)
