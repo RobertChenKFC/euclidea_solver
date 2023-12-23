@@ -1,5 +1,5 @@
 import random
-from euclidea_solver.entity.point import THRESH
+from euclidea_solver.entity.point import THRESH, Point
 from euclidea_solver.entity.line import Line
 from euclidea_solver.solution import (
     Solution, CreateLine, CreateCircle, CreatePoint,
@@ -7,23 +7,21 @@ from euclidea_solver.solution import (
 )
 from euclidea_solver.canvas import Canvas
 
+
 def test_solution_1():
     random.seed(0)
 
-    def canvas_creator():
+    def level_creator():
         canvas = Canvas()
-        canvas.create_point()
-        canvas.create_point()
-        return canvas
+        p1 = canvas.get_obj(canvas.create_point())
+        p2 = canvas.get_obj(canvas.create_point())
 
-    def verifier(canvas):
-        m = (canvas.get_obj(0) + canvas.get_obj(1)) * 0.5
-        for p in canvas.get_points():
-            if m.is_close_to(p):
-                return True
-        return False
+        m = 0.5 * (p1 + p2)
+        targets = [m]
 
-    solution = Solution(canvas_creator, verifier)
+        return canvas, targets
+
+    solution = Solution(level_creator)
     solution.add(CreateLine(0, 1))
     solution.add(CreateCircle(0, 1))
     solution.add(CreateCircle(1, 0))
@@ -35,27 +33,22 @@ def test_solution_1():
 def test_solution_2():
     random.seed(0)
 
-    def canvas_creator():
+    def level_creator():
         canvas = Canvas()
         p1 = canvas.create_point()
         p2 = canvas.create_point()
         canvas.create_line(p1, p2)
-        return canvas
 
-    def verifier(canvas):
-        p = canvas.get_obj(0)
-        q = canvas.get_obj(1)
-        m = (p + q) * 0.5
-        v1 = q - p
-        v1 = v1 / v1.mag()
-        for l in canvas.get_lines():
-            if l.contains(p):
-                v2 = l.p2 - l.p1
-                if abs(v1.dot(v2)) < THRESH * v2.mag():
-                    return True
-        return False
+        p1 = canvas.get_obj(p1)
+        p2 = canvas.get_obj(p2)
+        v = p2 - p1
+        p3 = p1 + Point(-v.y, v.x)
+        l = Line(p1, p3)
+        targets = [l]
 
-    solution = Solution(canvas_creator, verifier)
+        return canvas, targets
+
+    solution = Solution(level_creator)
     solution.add(CreatePoint(exclusion_list=(2,)))
     solution.add(CreateCircle(3, 0))
     solution.add(CreateLine(3, 5))
@@ -67,25 +60,18 @@ def test_solution_2():
 def test_solution_3():
     random.seed(0)
 
-    def canvas_creator():
+    def level_creator():
         canvas = Canvas()
-        canvas.create_point()
-        canvas.create_point()
-        return canvas
+        p1 = canvas.create_point()
+        p2 = canvas.create_point()
 
-    def verifier(canvas):
-        p = canvas.get_obj(0)
-        q = canvas.get_obj(1)
+        p1 = canvas.get_obj(p1)
+        p2 = canvas.get_obj(p2)
+        targets = [(i * p1 + (3 - i) * p2) / 3 for i in range(1, 3)]
 
-        ms = [(i * p + (3 - i) * q) / 3 for i in range(1, 3)]
-        matches = [False] * len(ms)
-        for m1 in canvas.get_points():
-            for i, m2 in enumerate(ms):
-                if m1.is_close_to(m2):
-                    matches[i] = True
-        return all(matches)
+        return canvas, targets
 
-    solution = Solution(canvas_creator, verifier)
+    solution = Solution(level_creator)
     solution.add(CreateLine(0, 1), verbose=True)
     solution.add(CreatePoint(exclusion_list=(2,)), verbose=True)
     solution.add(CreateCircle(3, 0), verbose=True)

@@ -1,3 +1,4 @@
+import random
 from timeit import default_timer
 from euclidea_solver.entity.line import Line
 from euclidea_solver.entity.circle import Circle
@@ -6,13 +7,16 @@ from euclidea_solver.solution import (
     CreateLine, CreateCircle
 )
 
+
 class Solver:
-    def __init__(self, canvas_creator, verifier):
-        self._solution = Solution(canvas_creator, verifier)
+    def __init__(self, level_creator):
+        random.seed(0)
+
+        self._solution = Solution(level_creator)
         self._candidates = []
         self._used_insts = set()
 
-        canvas = canvas_creator()
+        canvas, _ = level_creator()
         for p in canvas.get_points().values():
             for q in canvas.get_points().values():
                 if p != q:
@@ -125,7 +129,7 @@ class Solver:
                 if verbose:
                     toc = default_timer()
                     duration = toc - tic
-                    
+
                     print(
                         f"Found {cost}E solution in {duration:.2f} seconds "
                         f"after {self._num_trials} tries:"

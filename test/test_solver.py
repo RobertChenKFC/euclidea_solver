@@ -1,34 +1,28 @@
+from euclidea_solver.entity.line import Line
 from euclidea_solver.solver import Solver
 from euclidea_solver.canvas import Canvas
 from euclidea_solver.solution import Solution
-from euclidea_solver.entity.point import THRESH
+from euclidea_solver.entity.point import THRESH, Point
 
 
 def test_solver():
-    def canvas_creator():
+    def level_creator():
         canvas = Canvas()
-        canvas.create_point()
-        canvas.create_point()
-        return canvas
+        p1 = canvas.get_obj(canvas.create_point())
+        p2 = canvas.get_obj(canvas.create_point())
 
-    def verifier(canvas):
-        p = canvas.get_obj(0)
-        q = canvas.get_obj(1)
-        m = (p + q) * 0.5
-        v1 = q - p
-        v1 = v1 / v1.mag()
-        for l in canvas.get_lines():
-            if l.contains(m):
-                v2 = l.p1 - l.p2
-                if abs(v1.dot(v2)) < THRESH * v2.mag():
-                    return True
-        return False
+        m1 = 0.5 * (p1 + p2)
+        v = p2 - p1
+        m2 = m1 + Point(-v.y, v.x)
+        l = Line(m1, m2)
+        targets = [l]
 
-    solver = Solver(canvas_creator, verifier)
+        return canvas, targets
+
+    solver = Solver(level_creator)
     insts = solver.solve()
 
-    solution = Solution(canvas_creator, verifier)
+    solution = Solution(level_creator)
     for inst in insts:
         solution.add(inst)
     assert solution.verify()
-

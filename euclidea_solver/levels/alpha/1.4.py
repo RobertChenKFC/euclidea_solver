@@ -1,5 +1,7 @@
 # DEBUG
 import random
+
+from euclidea_solver.entity.circle import Circle
 from euclidea_solver.entity.line import Line
 
 from math import cos, pi
@@ -7,46 +9,33 @@ from euclidea_solver.canvas import Canvas
 from euclidea_solver.solver import Solver
 from euclidea_solver.entity.point import Point, THRESH
 
-def canvas_creator():
-    # DEBUG
-    random.seed(0)
+class LevelCreator:
+    def __init__(self):
+        self.p1 = None
+        self.p2 = None
 
-    canvas = Canvas()
-    p1 = canvas.get_obj(canvas.create_point())
-    p2 = canvas.get_obj(canvas.create_point())
-    v = p2 - p1
-    v = Point(-v.y, v.x)
-    canvas.create_point(p2 + v)
-    canvas.create_point(p1 + v)
-    for i in range(4):
-        canvas.create_line(i, (i + 1) % 4)
+    def __call__(self):
+        canvas = Canvas()
+        p1 = canvas.get_obj(canvas.create_point())
+        p2 = canvas.get_obj(canvas.create_point())
+        v = p2 - p1
+        v = Point(-v.y, v.x)
+        p3 = p2 + v
+        p4 = p1 + v
+        canvas.create_point(p3)
+        canvas.create_point(p4)
+        for i in range(4):
+            canvas.create_line(i, (i + 1) % 4)
 
-    # DEBUG
-    """
-    n = canvas.get_num_objs()
-    print(f"Num objects: {n}")
-    for i in range(n):
-        print(canvas.get_obj(i))
-    """
+        c = Circle((p1 + p2 + p3 + p4) * 0.25, (p2 - p1) * 0.5)
+        targets = [c]
 
-    return canvas
-
-
-def verifier(canvas):
-    p1 = canvas.get_obj(0)
-    p2 = canvas.get_obj(1)
-    p3 = canvas.get_obj(2)
-    p4 = canvas.get_obj(3)
-    m = (p1 + p2 + p3 + p4) * 0.25
-    r = (p1 - p2).mag() * 0.5
-    for c in canvas.get_circles():
-        if m.is_close_to(c.p1) and abs(r - c.r()) < THRESH:
-            return True
-    return False
+        return canvas, targets
 
 
 def main():
-    solver = Solver(canvas_creator, verifier)
+    level_creator = LevelCreator()
+    solver = Solver(level_creator)
     solver.solve()
 
 

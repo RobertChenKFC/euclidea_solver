@@ -7,6 +7,7 @@ RAND_RANGE = 1e2
 COORD_RANGE = 1e6
 POINT_SIZE = 0.2
 
+
 class Point:
     def __init__(self, x=None, y=None):
         if x is None or y is None:

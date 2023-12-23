@@ -2,3 +2,5 @@ venv/
 euclidea_solver.egg-info/
 __pycache__/
 euclidea_solver/levels/*/*.tex
+euclidea_solver/levels/*/*.aux
+euclidea_solver/levels/*/*.log
